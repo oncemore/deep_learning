@@ -39,6 +39,7 @@ import gzip
 import os
 import sys
 import time
+import csv
 
 import numpy
 
@@ -178,32 +179,36 @@ def load_data(dataset):
     #############
 
     # Download the MNIST dataset if it is not present
-    data_dir, data_file = os.path.split(dataset)
-    if data_dir == "" and not os.path.isfile(dataset):
-        # Check if dataset is in the data directory.
-        new_path = os.path.join(
-            os.path.split(__file__)[0],
-            "..",
-            "data",
-            dataset
-        )
-        if os.path.isfile(new_path) or data_file == 'mnist.pkl.gz':
-            dataset = new_path
+    #data_dir, data_file = os.path.split(dataset)
 
-    if (not os.path.isfile(dataset)) and data_file == 'mnist.pkl.gz':
-        import urllib
-        origin = (
-            'http://www.iro.umontreal.ca/~lisa/deep/data/mnist/mnist.pkl.gz'
-        )
-        print 'Downloading data from %s' % origin
-        urllib.urlretrieve(origin, dataset)
+    train_data = csv.reader(open('fbank/new_small_train.ark'),delimiter=" ")
 
-    print '... loading data'
+    train_data = list(train_data)
+    train_data = list(x[1:] for x in train_data)
+    train_data = numpy.array(train_data,dtype=numpy.float32)
+
+    train = train_data[0:90000]
+    valid = train_data[90000:100000]
+    test = train_data[100000:]
+
+    label = csv.reader(open('label/new_small_train.lab'),delimiter=",")
+    label = list(label)
+    label = list(x[1] for x in label)
+    label = numpy.array(label)
+    label = label.astype('int')
+
+    train_label = label[0:90000]
+    val_label = label[90000:100000]
+    test_label = label[100000:]
+
+    train_pair = [train,train_label]
+    val_pair = [valid,val_label]
+    test_pair = [test,test_label]
 
     # Load the dataset
-    f = gzip.open(dataset, 'rb')
-    train_set, valid_set, test_set = cPickle.load(f)
-    f.close()
+    #f = gzip.open(dataset, 'rb')
+    #train_set, valid_set, test_set = cPickle.load(f)
+    #f.close()
     #train_set, valid_set, test_set format: tuple(input, target)
     #input is an numpy.ndarray of 2 dimensions (a matrix)
     #witch row's correspond to an example. target is a
@@ -236,9 +241,9 @@ def load_data(dataset):
         # lets ous get around this issue
         return shared_x, T.cast(shared_y, 'int32')
 
-    test_set_x, test_set_y = shared_dataset(test_set)
-    valid_set_x, valid_set_y = shared_dataset(valid_set)
-    train_set_x, train_set_y = shared_dataset(train_set)
+    test_set_x, test_set_y = shared_dataset(test_pair)
+    valid_set_x, valid_set_y = shared_dataset(val_pair)
+    train_set_x, train_set_y = shared_dataset(train_pair)
 
     rval = [(train_set_x, train_set_y), (valid_set_x, valid_set_y),
             (test_set_x, test_set_y)]

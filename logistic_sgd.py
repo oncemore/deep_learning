@@ -180,7 +180,7 @@ def load_data(dataset):
 
     # Download the MNIST dataset if it is not present
     #data_dir, data_file = os.path.split(dataset)
-
+    print 'load data'
     train_data = csv.reader(open('fbank/new_small_train.ark'),delimiter=" ")
 
     train_data = list(train_data)
@@ -197,9 +197,16 @@ def load_data(dataset):
     label = numpy.array(label)
     label = label.astype('int')
 
-    train_label = label[0:90000]
-    val_label = label[90000:100000]
-    test_label = label[100000:]
+    # minus one because y_i will overflow
+    train_label = label[0:90000] - 1
+    val_label = label[90000:100000] - 1
+    test_label = label[100000:] - 1
+
+    #test_data = csv.reader(open('fbank/train.ark'),delimiter=" ")
+    #test_data = list(test_data)
+    #test_name = list(x[0] for x in test_data)
+    #test_data = list(x[1:] for x in test_data)
+    #test_data = numpy.array(test_data,dtype=numpy.float32)
 
     train_pair = [train,train_label]
     val_pair = [valid,val_label]
@@ -250,9 +257,8 @@ def load_data(dataset):
     return rval
 
 
-def sgd_optimization_mnist(learning_rate=0.13, n_epochs=1000,
-                           dataset='mnist.pkl.gz',
-                           batch_size=600):
+def sgd_optimization_mnist(learning_rate=0.10, n_epochs=100,dataset='SienLienIsPresident',
+                           batch_size=1000):
     """
     Demonstrate stochastic gradient descent optimization of a log-linear
     model
@@ -297,7 +303,7 @@ def sgd_optimization_mnist(learning_rate=0.13, n_epochs=1000,
 
     # construct the logistic regression class
     # Each MNIST image has size 28*28
-    classifier = LogisticRegression(input=x, n_in=28 * 28, n_out=10)
+    classifier = LogisticRegression(input=x, n_in=69, n_out=48)
 
     # the cost we minimize during training is the negative log likelihood of
     # the model in symbolic format

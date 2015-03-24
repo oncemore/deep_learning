@@ -161,11 +161,14 @@ class LogisticRegression(object):
         # check if y is of the correct datatype
         if y.dtype.startswith('int'):
             # the T.neq operator returns a vector of 0s and 1s, where 1
-            # represents a mistake in prediction
+            # represents a mistake in prediction     
             return T.mean(T.neq(self.y_pred, y))
+            #return [self.y_pred[0:3],y[0:3]]
         else:
             raise NotImplementedError()
 
+    def results(self,y):
+        return [self.y_pred,y]
 
 def load_data(dataset):
     ''' Loads the dataset
@@ -180,16 +183,26 @@ def load_data(dataset):
 
     # Download the MNIST dataset if it is not present
     #data_dir, data_file = os.path.split(dataset)
-    print 'load data'
+    print '... load data'
     train_data = csv.reader(open('fbank/new_small_train.ark'),delimiter=" ")
+    test_data = csv.reader(open('fbank/test.ark'),delimiter=" ")
 
     train_data = list(train_data)
     train_data = list(x[1:] for x in train_data)
     train_data = numpy.array(train_data,dtype=numpy.float32)
 
+    test_data = list(test_data)
+    test_name = list(x[0] for x in test_data)
+    test_name = test_name + test_name[0:9594] #dummy
+    test_data = list(x[1:] for x in test_data)
+    test_data = test_data + test_data[0:9594] #dummy
+    test_data = numpy.array(test_data,dtype=numpy.float32)
+    #test_name = list(x[0] for x in train_data) 
+
     train = train_data[0:90000]
     valid = train_data[90000:100000]
-    test = train_data[100000:]
+    #test = train_data[100000:]
+    test = test_data 
 
     label = csv.reader(open('label/new_small_train.lab'),delimiter=",")
     label = list(label)
@@ -200,7 +213,8 @@ def load_data(dataset):
     # minus one because y_i will overflow
     train_label = label[0:90000] - 1
     val_label = label[90000:100000] - 1
-    test_label = label[100000:] - 1
+    #test_label = label[100000:] - 1
+    test_label = [-1]*190000 #dummy
 
     #test_data = csv.reader(open('fbank/train.ark'),delimiter=" ")
     #test_data = list(test_data)
@@ -211,7 +225,6 @@ def load_data(dataset):
     train_pair = [train,train_label]
     val_pair = [valid,val_label]
     test_pair = [test,test_label]
-
     # Load the dataset
     #f = gzip.open(dataset, 'rb')
     #train_set, valid_set, test_set = cPickle.load(f)
@@ -253,11 +266,11 @@ def load_data(dataset):
     train_set_x, train_set_y = shared_dataset(train_pair)
 
     rval = [(train_set_x, train_set_y), (valid_set_x, valid_set_y),
-            (test_set_x, test_set_y)]
+            (test_set_x, test_set_y),test_name]
     return rval
 
 
-def sgd_optimization_mnist(learning_rate=0.10, n_epochs=100,dataset='SienLienIsPresident',
+def sgd_optimization_mnist(learning_rate=0.08, n_epochs=100,dataset='SienLienIsPresident',
                            batch_size=1000):
     """
     Demonstrate stochastic gradient descent optimization of a log-linear
@@ -282,6 +295,7 @@ def sgd_optimization_mnist(learning_rate=0.10, n_epochs=100,dataset='SienLienIsP
     train_set_x, train_set_y = datasets[0]
     valid_set_x, valid_set_y = datasets[1]
     test_set_x, test_set_y = datasets[2]
+    train_name = datasets[3]
 
     # compute number of minibatches for training, validation and testing
     n_train_batches = train_set_x.get_value(borrow=True).shape[0] / batch_size
@@ -313,7 +327,8 @@ def sgd_optimization_mnist(learning_rate=0.10, n_epochs=100,dataset='SienLienIsP
     # the model on a minibatch
     test_model = theano.function(
         inputs=[index],
-        outputs=classifier.errors(y),
+        #outputs=classifier.errors(y),
+        outputs=classifier.results(y),
         givens={
             x: test_set_x[index * batch_size: (index + 1) * batch_size],
             y: test_set_y[index * batch_size: (index + 1) * batch_size]
@@ -411,7 +426,11 @@ def sgd_optimization_mnist(learning_rate=0.10, n_epochs=100,dataset='SienLienIsP
 
                     test_losses = [test_model(i)
                                    for i in xrange(n_test_batches)]
-                    test_score = numpy.mean(test_losses)
+                    test_result = []
+                    for x in test_losses:
+                        test_result = test_result + list(x[0]+1)
+
+                    #print list(x[2] for x in test_losses)
 
                     print(
                         (
@@ -429,6 +448,14 @@ def sgd_optimization_mnist(learning_rate=0.10, n_epochs=100,dataset='SienLienIsP
             if patience <= iter:
                 done_looping = True
                 break
+    
+    submission_result =  zip(train_name[0:180406],test_result[0:180406])
+    header = [('Id','Prediction')]
+    
+    with open("output.csv", "wb") as f:
+        writer = csv.writer(f)
+        writer.writerows(header)
+        writer.writerows(submission_result)
 
     end_time = time.clock()
     print(

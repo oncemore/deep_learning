@@ -184,12 +184,16 @@ def load_data(dataset):
     # Download the MNIST dataset if it is not present
     #data_dir, data_file = os.path.split(dataset)
     print '... load data'
-    train_data = csv.reader(open('fbank/new_small_train.ark'),delimiter=" ")
+    train_data = csv.reader(open('fbank/new_train.ark'),delimiter=" ")
     test_data = csv.reader(open('fbank/test.ark'),delimiter=" ")
 
     train_data = list(train_data)
+    #test_name = list(x[0] for x in train_data) #
     train_data = list(x[1:] for x in train_data)
     train_data = numpy.array(train_data,dtype=numpy.float32)
+
+    test_start = 1121000
+    test_end = 1130000
 
     test_data = list(test_data)
     test_name = list(x[0] for x in test_data)
@@ -197,23 +201,25 @@ def load_data(dataset):
     test_data = list(x[1:] for x in test_data)
     test_data = test_data + test_data[0:9594] #dummy
     test_data = numpy.array(test_data,dtype=numpy.float32)
-    #test_name = list(x[0] for x in train_data) 
+    #test_name = test_name[test_start:test_end] 
 
-    train = train_data[0:90000]
-    valid = train_data[90000:100000]
-    #test = train_data[100000:]
+    N = 1120000
+
+    train = train_data[0:N]
+    valid = train_data[N:test_start]
+    #test = train_data[test_start:test_end]
     test = test_data 
 
-    label = csv.reader(open('label/new_small_train.lab'),delimiter=",")
+    label = csv.reader(open('label/new_train.lab'),delimiter=",")
     label = list(label)
     label = list(x[1] for x in label)
     label = numpy.array(label)
     label = label.astype('int')
 
     # minus one because y_i will overflow
-    train_label = label[0:90000] - 1
-    val_label = label[90000:100000] - 1
-    #test_label = label[100000:] - 1
+    train_label = label[0:N] - 1
+    val_label = label[N:test_start] - 1
+    #test_label = label[test_start:test_end] - 1
     test_label = [-1]*190000 #dummy
 
     #test_data = csv.reader(open('fbank/train.ark'),delimiter=" ")
@@ -456,6 +462,8 @@ def sgd_optimization_mnist(learning_rate=0.08, n_epochs=100,dataset='SienLienIsP
         writer = csv.writer(f)
         writer.writerows(header)
         writer.writerows(submission_result)
+
+    #os.system("Rscript test.r")    
 
     end_time = time.clock()
     print(
